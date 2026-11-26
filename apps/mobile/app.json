@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Run Territory",
+    "slug": "run-territory",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.runterritory.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "O Run Territory usa sua localização para registrar a corrida e conquistar territórios."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E17",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.runterritory.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O Run Territory usa sua localização para registrar a corrida e conquistar territórios."
+        }
+      ],
+      "@maplibre/maplibre-react-native"
+    ],
+    "scheme": "runterritory",
+    "backgroundColor": "#0A0E17",
+    "extra": {
+      "apiUrl": "http://localhost:3000"
+    }
+  }
+}
