@@ -1,9 +1,9 @@
-// Ranking por território, distância e conquistas (semanal, mensal e geral).
+// Ranking por território, distância e conquistas (semanal, mensal e geral) e disputa por bairros.
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { ColorDot, Dim, Screen, Segmented } from '../../components/ui';
-import { api, type RankingRow } from '../../lib/api';
+import { api, type RankingRow, type Region } from '../../lib/api';
 import { formatArea, formatDistance } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { theme } from '../../lib/theme';
@@ -12,6 +12,53 @@ type By = 'area' | 'distance' | 'conquests';
 type Period = 'week' | 'month' | 'all';
 
 export default function Ranking() {
+  const [mode, setMode] = useState<'players' | 'regions'>('players');
+  return (
+    <Screen style={{ padding: 16, gap: 10 }}>
+      <Segmented value={mode} onChange={setMode} options={[{ value: 'players', label: 'Jogadores' }, { value: 'regions', label: 'Bairros' }]} />
+      {mode === 'players' ? <PlayersRanking /> : <RegionsList />}
+    </Screen>
+  );
+}
+
+function RegionsList() {
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [loading, setLoading] = useState(false);
+  const load = useCallback(() => {
+    setLoading(true);
+    api
+      .regions()
+      .then(setRegions)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+  useFocusEffect(load);
+  return (
+    <FlatList
+      data={regions}
+      keyExtractor={(r) => String(r.id)}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={theme.accent} />}
+      ListEmptyComponent={
+        <Dim style={{ textAlign: 'center', marginTop: 30 }}>Nenhum bairro cadastrado no servidor ainda (veja docs/BAIRROS.md).</Dim>
+      }
+      renderItem={({ item }) => (
+        <Pressable onPress={() => router.push(`/region/${item.id}`)} style={[st.row, item.myAreaM2 > 0 && item.leader?.areaM2 === item.myAreaM2 && st.me]}>
+          <ColorDot color={item.leader?.color ?? theme.border} size={18} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.name}>{item.name}</Text>
+            <Dim style={{ fontSize: 12 }}>
+              {item.leader ? `👑 ${item.leader.username} · ${(item.leader.share * 100).toFixed(1).replace('.', ',')}%` : 'Sem dono'}
+              {item.players > 1 ? ` · ${item.players} na disputa` : ''}
+            </Dim>
+          </View>
+          {item.myAreaM2 > 0 && <Text style={st.value}>{formatArea(item.myAreaM2)}</Text>}
+        </Pressable>
+      )}
+    />
+  );
+}
+
+function PlayersRanking() {
   const { user } = useSession();
   const [by, setBy] = useState<By>('area');
   const [period, setPeriod] = useState<Period>('all');
@@ -32,7 +79,7 @@ export default function Ranking() {
   const fmt = (v: number) => (by === 'area' ? formatArea(v) : by === 'distance' ? formatDistance(v) : `${v} conquistas`);
 
   return (
-    <Screen style={{ padding: 16, gap: 10 }}>
+    <>
       <Segmented<By> value={by} onChange={setBy} options={[{ value: 'area', label: 'Território' }, { value: 'distance', label: 'Distância' }, { value: 'conquests', label: 'Conquistas' }]} />
       <Segmented<Period> value={period} onChange={setPeriod} options={[{ value: 'week', label: 'Semana' }, { value: 'month', label: 'Mês' }, { value: 'all', label: 'Geral' }]} />
       <Segmented value={scope} onChange={setScope} options={[{ value: 'all', label: 'Todos' }, { value: 'friends', label: 'Eu e aliados' }]} />
@@ -54,7 +101,7 @@ export default function Ranking() {
           </Pressable>
         )}
       />
-    </Screen>
+    </>
   );
 }
 

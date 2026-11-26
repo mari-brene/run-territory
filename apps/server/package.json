@@ -8,7 +8,8 @@
     "migrate": "tsx src/migrate.ts",
     "simulate": "tsx src/simulate.ts",
     "test": "vitest run --no-file-parallelism",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "regions": "tsx src/regions.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",

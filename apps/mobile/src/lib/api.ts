@@ -1,6 +1,6 @@
 // Cliente HTTP do backend Run Territory.
 import Constants from 'expo-constants';
-import type { FeatureCollection, MultiPolygon } from 'geojson';
+import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 
 const fromConfig = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
 let baseUrl = process.env.EXPO_PUBLIC_API_URL ?? fromConfig ?? 'http://localhost:3000';
@@ -167,6 +167,51 @@ export interface Friend {
   areaM2: number;
 }
 
+export interface Mission {
+  id: string;
+  period: 'day' | 'week';
+  metric: 'distance_m' | 'runs' | 'captures' | 'steals' | 'area_m2';
+  goal: number;
+  xp: number;
+  title: string;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+  periodStart: string;
+  endsAt: string;
+}
+export type ChallengeMetric = 'distance' | 'area' | 'conquests';
+export interface Challenge {
+  id: string;
+  metric: ChallengeMetric;
+  days: number;
+  status: 'pending' | 'active' | 'declined' | 'cancelled' | 'finished';
+  createdAt: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  role: 'challenger' | 'opponent';
+  me: { userId: string; score: number };
+  rival: { userId: string; username: string; color: string; score: number };
+  winnerId: string | null;
+  result: 'won' | 'lost' | 'draw' | null;
+}
+export interface Region {
+  id: number;
+  name: string;
+  city: string;
+  kind: string;
+  areaM2: number;
+  geom: Polygon | MultiPolygon;
+  players: number;
+  leader: { userId: string; username: string; color: string; areaM2: number; share: number } | null;
+  myAreaM2: number;
+}
+export interface RegionRanking {
+  region: { id: number; name: string; city: string; kind: string; areaM2: number };
+  period: 'now' | 'week' | 'month';
+  rows: (RankingRow & { share: number })[];
+}
+
 // ---------- endpoints ----------
 export const api = {
   register: (username: string, email: string, password: string) =>
@@ -196,6 +241,17 @@ export const api = {
   rankings: (by: 'area' | 'distance' | 'conquests', period: 'week' | 'month' | 'all', scope: 'all' | 'friends' = 'all') =>
     req<RankingRow[]>('GET', `/api/rankings?by=${by}&period=${period}&scope=${scope}`),
   profile: (id: string) => req<Profile>('GET', `/api/users/${id}`),
+
+  missions: () => req<Mission[]>('GET', '/api/missions'),
+  claimMission: (id: string) => req<{ xpEarned: number; level: number; missions: Mission[] }>('POST', `/api/missions/${id}/claim`),
+
+  challenges: () => req<Challenge[]>('GET', '/api/challenges'),
+  createChallenge: (opponentId: string, metric: ChallengeMetric, days: number) =>
+    req<Challenge>('POST', '/api/challenges', { opponentId, metric, days }),
+  challengeAction: (id: string, action: 'accept' | 'decline' | 'cancel') => req<Challenge>('POST', `/api/challenges/${id}/${action}`),
+
+  regions: (bbox?: [number, number, number, number]) => req<Region[]>('GET', `/api/regions${bbox ? `?bbox=${bbox.join(',')}` : ''}`),
+  regionRanking: (id: number, period: 'now' | 'week' | 'month') => req<RegionRanking>('GET', `/api/regions/${id}/ranking?period=${period}`),
 
   friends: () => req<Friend[]>('GET', '/api/friends'),
   addFriend: (username: string) => req<{ ok: true }>('POST', '/api/friends', { username }),
