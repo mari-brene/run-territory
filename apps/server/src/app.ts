@@ -14,6 +14,7 @@ import { createSession, endSession, bearer, hashPassword, purgeExpiredSessions, 
 import { Hub } from './realtime';
 import { HttpError, RunService, toRun } from './runService';
 import { config } from './config';
+import { periodStartSql, registerGamification } from './gamification';
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const maplibreDir = path.dirname(createRequire(import.meta.url).resolve('maplibre-gl/dist/maplibre-gl.js'));
@@ -266,7 +267,8 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
           scope: z.enum(['all', 'friends']).default('all'),
         })
         .parse(req.query);
-      const since = q.period === 'week' ? "date_trunc('week', now())" : q.period === 'month' ? "date_trunc('month', now())" : "'-infinity'::timestamptz";
+      // $2 = fuso do jogo, para "esta semana" começar na segunda à meia-noite local.
+      const since = q.period === 'all' ? "'-infinity'::timestamptz" : periodStartSql(q.period, '$2::text');
       const friendsFilter =
         q.scope === 'friends' ? 'AND (u.id = $1 OR u.id IN (SELECT friend_id FROM friendships WHERE user_id = $1))' : 'AND $1::uuid IS NOT NULL';
       const valueSql = {
@@ -280,9 +282,9 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
       }[q.by];
       const { rows } = await db.query(
         `SELECT u.id, u.username, u.color, u.xp, ${valueSql}::float8 AS value
-         FROM users u WHERE true ${friendsFilter}
+         FROM users u WHERE $2::text IS NOT NULL ${friendsFilter}
          ORDER BY value DESC, u.username LIMIT 100`,
-        [req.userId],
+        [req.userId, config.timezone],
       );
       return rows.map((r, i) => ({ rank: i + 1, userId: r.id, username: r.username, color: r.color, level: levelFromXp(r.xp).level, value: r.value }));
     });
@@ -360,6 +362,8 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
       );
       return rows;
     });
+
+    registerGamification(app, db, hub, auth);
 
     // ---------- tempo real ----------
     app.register(async (instance) => {

@@ -25,6 +25,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="map" options={{ title: 'Mapa', headerShown: false, tabBarIcon: icon('⬢') }} />
+      <Tabs.Screen name="missions" options={{ title: 'Missões', tabBarIcon: icon('🎯') }} />
       <Tabs.Screen name="ranking" options={{ title: 'Ranking', tabBarIcon: icon('🏆') }} />
       <Tabs.Screen name="friends" options={{ title: 'Amigos', tabBarIcon: icon('👥') }} />
       <Tabs.Screen name="history" options={{ title: 'Histórico', tabBarIcon: icon('📜') }} />

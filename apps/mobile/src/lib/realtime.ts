@@ -7,7 +7,8 @@ export type ServerMessage =
   | { type: 'territories_changed'; userIds: string[]; by: string }
   | { type: 'runner'; userId: string; username: string; color: string; lat: number; lng: number; trail: [number, number][] }
   | { type: 'runner_stopped'; userId: string }
-  | { type: 'territory_lost'; userId: string; by: string; byUsername: string; area: number };
+  | { type: 'territory_lost'; userId: string; by: string; byUsername: string; area: number }
+  | { type: 'challenge'; challengeId: string; status: string; byUsername: string };
 
 export function useRealtime(enabled: boolean, onMessage: (m: ServerMessage) => void) {
   const handler = useRef(onMessage);

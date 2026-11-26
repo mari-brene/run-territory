@@ -79,7 +79,8 @@ o IP do computador na mesma rede). Para testar sem sair de casa, ligue o **Modo 
 corrida, toque no mapa e o corredor vai até o ponto.
 
 Telas: inicial, cadastro, login, mapa principal, corrida em andamento, resumo, ranking, amigos (aliados),
-histórico (corridas e conquistas/perdas), perfil (nível, XP e medalhas), perfil de outro jogador e configurações.
+histórico (corridas e conquistas/perdas), perfil (nível, XP e medalhas), perfil de outro jogador, configurações,
+missões e desafios, novo desafio, bairros (em Ranking) e ranking de um bairro.
 
 ## API (resumo)
 
@@ -95,7 +96,10 @@ histórico (corridas e conquistas/perdas), perfil (nível, XP e medalhas), perfi
 | GET | `/api/rankings?by=area\|distance\|conquests&period=week\|month\|all&scope=all\|friends` | ranking |
 | GET | `/api/users/:id` | perfil, nível, totais e medalhas |
 | GET/POST/DELETE | `/api/friends` | aliados |
-| WS | `/ws?token=…` | `territories_changed`, `runner`, `runner_stopped`, `territory_lost` |
+| GET | `/api/missions` · POST `/api/missions/:id/claim` | missões diárias (3) e semanais (2) e resgate de XP |
+| GET/POST | `/api/challenges` · POST `/:id/accept` · `/decline` · `/cancel` | desafios entre aliados (distância, área ou conquistas, 1 a 30 dias) |
+| GET | `/api/regions?bbox=…` · `/api/regions/:id/ranking?period=now\|week\|month` | bairros: quem domina e ranking do bairro ([como importar](docs/BAIRROS.md)) |
+| WS | `/ws?token=…` | `territories_changed`, `runner`, `runner_stopped`, `territory_lost`, `challenge` |
 
 ## Pontos de atenção e próximos passos
 
@@ -103,6 +107,6 @@ histórico (corridas e conquistas/perdas), perfil (nível, XP e medalhas), perfi
   Próximo passo: `expo-task-manager` + permissão "sempre" para rastrear com a tela bloqueada.
 - **Escala:** as conquistas são serializadas por um lock global no Postgres (simples e correto). Para
   muitos usuários: locks por célula de grade (geohash) e Redis pub/sub no lugar do hub de WebSocket em memória.
-- **Ainda não implementado:** desafios entre amigos, missões diárias/semanais, ranking por bairro/cidade
-  (precisa de geocodificação reversa ou polígonos de bairros no PostGIS), cortar o rastro de outro jogador.
+- **Ainda não implementado:** cortar o rastro de outro jogador, notificações push (hoje os avisos de
+  desafio chegam só com o app aberto), contornos dos bairros desenhados no mapa.
 - **Mapa:** estilo gratuito do OpenFreeMap (`apps/mobile/src/lib/theme.ts`), sem chave de API.

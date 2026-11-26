@@ -1,5 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-import { Alert } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Alert, View } from 'react-native';
 import { ProfileView } from '../../components/ProfileView';
 import { Button, Screen } from '../../components/ui';
 import { api } from '../../lib/api';
@@ -14,7 +14,10 @@ export default function Player() {
         userId={id}
         footer={(p, reload) =>
           p.id === user?.id ? null : p.isFriend ? (
-            <Button title="Remover aliado" variant="ghost" onPress={() => api.removeFriend(p.id).then(reload)} />
+            <View style={{ gap: 8 }}>
+              <Button title="Desafiar" onPress={() => router.push({ pathname: '/challenge/new', params: { opponentId: p.id } })} />
+              <Button title="Remover aliado" variant="ghost" onPress={() => api.removeFriend(p.id).then(reload)} />
+            </View>
           ) : (
             <Button
               title="Adicionar como aliado"
