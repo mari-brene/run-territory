@@ -10,7 +10,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.runterritory.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "O Run Territory usa sua localização para registrar a corrida e conquistar territórios."
+        "NSLocationWhenInUseUsageDescription": "O Run Territory usa sua localização para registrar a corrida e conquistar territórios.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
@@ -39,7 +42,15 @@
           "locationWhenInUsePermission": "O Run Territory usa sua localização para registrar a corrida e conquistar territórios."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "scheme": "runterritory",
     "backgroundColor": "#0A0E17",
