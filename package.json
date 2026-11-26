@@ -1,0 +1,21 @@
+{
+  "name": "run-territory",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Run Territory — corrida com conquista de territórios",
+  "workspaces": [
+    "packages/*",
+    "apps/server"
+  ],
+  "scripts": {
+    "test": "npm run test -w @run-territory/engine && npm run test -w @run-territory/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:server": "npm run dev -w @run-territory/server"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.7",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
