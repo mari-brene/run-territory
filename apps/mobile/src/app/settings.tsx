@@ -11,6 +11,26 @@ export default function Settings() {
   const [palette, setPalette] = useState<string[]>([]);
   const [apiUrl, setApiUrl] = useState(settings.apiUrl);
   const [testing, setTesting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+
+  const deleteAccount = () =>
+    Alert.alert('Excluir conta?', 'Seu território, corridas e amizades serão apagados para sempre.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteMe(deletePassword);
+            await signOut();
+            router.replace('/');
+          } catch (e: any) {
+            Alert.alert('Não foi possível excluir', e.message);
+          }
+        },
+      },
+    ]);
 
   useEffect(() => {
     if (user) api.palette().then(setPalette).catch(() => {});
@@ -77,6 +97,20 @@ export default function Settings() {
             router.replace('/');
           }}
         />
+      )}
+
+      {user && (
+        <Card>
+          <Text style={st.h}>Excluir conta</Text>
+          {deleting ? (
+            <>
+              <Input label="Confirme sua senha" value={deletePassword} onChangeText={setDeletePassword} secureTextEntry />
+              <Button title="Excluir minha conta" variant="danger" disabled={!deletePassword} onPress={deleteAccount} />
+            </>
+          ) : (
+            <Button title="Quero excluir minha conta" variant="ghost" onPress={() => setDeleting(true)} />
+          )}
+        </Card>
       )}
       <Dim style={{ textAlign: 'center' }}>Run Territory · MVP 0.1 · Mapa © OpenStreetMap / OpenFreeMap</Dim>
     </ScrollView>

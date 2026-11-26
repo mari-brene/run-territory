@@ -176,6 +176,7 @@ export const api = {
   me: () => req<User>('GET', '/api/me'),
   updateMe: (color: string) => req<User>('PATCH', '/api/me', { color }),
   palette: () => req<string[]>('GET', '/api/palette'),
+  deleteMe: (password: string) => req<{ ok: boolean }>('DELETE', '/api/me', { password }),
   health: () => req<{ ok: boolean }>('GET', '/api/health'),
 
   territories: (bbox?: [number, number, number, number]) =>

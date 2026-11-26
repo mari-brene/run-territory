@@ -5,6 +5,7 @@ desenhando um rastro e, ao voltar, a área fechada vira sua. Áreas de outros jo
 
 > **Quer rodar no seu celular?** Siga o guia passo a passo para iniciantes:
 > [docs/COMO-RODAR-NO-CELULAR.md](docs/COMO-RODAR-NO-CELULAR.md).
+> **Quer publicar na internet?** Veja [docs/PUBLICAR-ONLINE.md](docs/PUBLICAR-ONLINE.md) (Railway ou Supabase, variáveis e segurança).
 
 Tudo em **TypeScript**:
 
@@ -59,7 +60,7 @@ Abra `http://localhost:3000/` para ver o mapa de espectador.
 
 ```bash
 createdb runterritory_test && psql -d runterritory_test -c 'create extension postgis'
-npm test        # 14 testes do motor + 10 testes de API contra PostGIS
+npm test        # testes do motor + testes de API e de segurança contra PostGIS
 ```
 
 ### App
@@ -85,7 +86,7 @@ histórico (corridas e conquistas/perdas), perfil (nível, XP e medalhas), perfi
 | Método | Rota | O que faz |
 |---|---|---|
 | POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | contas (token Bearer) |
-| GET/PATCH | `/api/me` | usuário logado / trocar cor |
+| GET/PATCH/DELETE | `/api/me` | usuário logado / trocar cor / excluir conta (pede a senha) |
 | GET | `/api/territories?bbox=minLng,minLat,maxLng,maxLat` | territórios (relação `me`/`friend`/`rival`) |
 | GET | `/api/live` | corredores ativos agora |
 | POST | `/api/runs` · `/api/runs/:id/points` · `/pause` · `/resume` · `/finish` | ciclo da corrida |
