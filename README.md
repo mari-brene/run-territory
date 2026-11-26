@@ -3,6 +3,9 @@
 Jogo de corrida com conquista de territórios: você corre pela cidade com GPS, sai do seu território
 desenhando um rastro e, ao voltar, a área fechada vira sua. Áreas de outros jogadores podem ser tomadas.
 
+> **Quer rodar no seu celular?** Siga o guia passo a passo para iniciantes:
+> [docs/COMO-RODAR-NO-CELULAR.md](docs/COMO-RODAR-NO-CELULAR.md).
+
 Tudo em **TypeScript**:
 
 | Parte | Pasta | Tecnologia |
@@ -66,10 +69,11 @@ O MapLibre usa código nativo, então o app roda num **development build** (não
 ```bash
 cd apps/mobile
 npm install --legacy-peer-deps
-npx expo run:android        # ou: npx expo run:ios  /  npx eas-cli build --profile development
+npm ci
+npx expo run:android        # ou: npx expo run:ios  /  npx eas-cli@latest build -p android --profile preview (APK na nuvem)
 ```
 
-No celular, abra **Configurações** no app e coloque o endereço do servidor (ex.: `http://192.168.0.10:3000`,
+No celular, toque em **⚙ Configurar servidor** na tela inicial (ou **Configurações** depois de entrar) e coloque o endereço do servidor (ex.: `http://192.168.0.10:3000`,
 o IP do computador na mesma rede). Para testar sem sair de casa, ligue o **Modo simulação**: durante a
 corrida, toque no mapa e o corredor vai até o ponto.
 
