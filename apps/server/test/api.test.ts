@@ -208,6 +208,27 @@ describe('mapa, ranking, perfil e amigos', () => {
     const earned = prof.medals.filter((m: any) => m.earned).map((m: any) => m.id);
     expect(earned).toEqual(expect.arrayContaining(['first_run', 'first_capture', 'thief']));
   });
+
+  it('salva o visual do corredor e recusa itens ainda bloqueados', async () => {
+    const me = await call(caio, 'GET', '/api/me');
+    expect(me.look.pattern).toBe('liso');
+    const saved = await call(caio, 'PATCH', '/api/me', { look: { ...me.look, hair: 'cacheado', pattern: 'listras', emblem: 'estrela', lixo: 1 } });
+    expect(saved.look).toMatchObject({ hair: 'cacheado', pattern: 'listras', emblem: 'estrela' });
+    expect(saved.look).not.toHaveProperty('lixo');
+    expect(saved.color).toBe(me.color);
+    // Xadrez pede nível 7; a cor continua a mesma.
+    const locked = await app.inject({ method: 'PATCH', url: '/api/me', payload: { look: { pattern: 'xadrez' } }, headers: { authorization: `Bearer ${caio.token}` } });
+    expect(locked.statusCode).toBe(403);
+    expect(locked.json().error).toContain('Nível 7');
+    // Raio pede a medalha Invasor, que a bia tem.
+    await call(bia, 'PATCH', '/api/me', { look: { emblem: 'raio' } });
+    const bb = [offset(ORIGIN, -2000, -2000), offset(ORIGIN, 2000, 2000)];
+    const fc = await call(ana, 'GET', `/api/territories?bbox=${bb[0].lng},${bb[0].lat},${bb[1].lng},${bb[1].lat}`);
+    const props = Object.fromEntries(fc.features.map((f: any) => [f.properties.username, f.properties]));
+    expect(props.bia.emblem).toBe('raio');
+    expect(props.caio.pattern).toBe('listras');
+    expect((await call(ana, 'GET', `/api/users/${caio.id}`)).look.hair).toBe('cacheado');
+  });
 });
 
 describe('tempo real', () => {

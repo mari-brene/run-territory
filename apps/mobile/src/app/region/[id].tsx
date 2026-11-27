@@ -2,11 +2,11 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { ColorDot, Dim, Screen, Segmented } from '../../components/ui';
+import { PlayerBadge, Dim, Screen, Segmented } from '../../components/ui';
 import { api, type RegionRanking } from '../../lib/api';
 import { formatArea } from '../../lib/format';
 import { useSession } from '../../lib/session';
-import { theme } from '../../lib/theme';
+import { font, lift, theme } from '../../lib/theme';
 
 type Period = 'now' | 'week' | 'month';
 
@@ -54,7 +54,7 @@ export default function RegionScreen() {
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`/player/${item.userId}`)} style={[st.row, item.userId === user?.id && st.me]}>
             <Text style={[st.rank, item.rank === 1 && { color: '#FFD700' }]}>{item.rank === 1 ? '👑' : item.rank}</Text>
-            <ColorDot color={item.color} size={18} />
+            <PlayerBadge name={item.username} color={item.color} size={34} />
             <View style={{ flex: 1 }}>
               <Text style={st.name}>{item.username}</Text>
               <Dim style={{ fontSize: 12 }}>Nível {item.level}</Dim>
@@ -71,9 +71,9 @@ export default function RegionScreen() {
 }
 
 const st = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: theme.surface, borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: theme.border },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: theme.surface, borderRadius: 20, marginBottom: 8, ...lift(3) },
   me: { borderColor: theme.accent },
   rank: { color: theme.textDim, fontWeight: '900', fontSize: 20, width: 30, textAlign: 'center' },
-  name: { color: theme.text, fontWeight: '800', fontSize: 16 },
+  name: { color: theme.text, fontFamily: font.display, fontSize: 16 },
   value: { color: theme.text, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

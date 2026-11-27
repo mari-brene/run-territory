@@ -9,7 +9,8 @@ import { formatArea, formatDistance, formatDuration, formatPace, formatSpeed } f
 import { useMapData } from '../lib/mapData';
 import { useRun } from '../lib/run';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { sanitizeLook } from '../lib/look';
+import { font, lift, theme } from '../lib/theme';
 
 export default function RunScreen() {
   const { user, settings } = useSession();
@@ -37,7 +38,7 @@ export default function RunScreen() {
       setBusy(true);
       try {
         const summary = await r.finish();
-        if (summary) router.replace(`/summary/${summary.id}`);
+        if (summary) router.replace(`/summary/${summary.id}?fresh=1`);
       } catch (e: any) {
         Alert.alert('Erro', e.message);
       } finally {
@@ -59,6 +60,8 @@ export default function RunScreen() {
         territories={territories}
         live={live}
         myColor={user?.color}
+        myLook={sanitizeLook(user?.look)}
+        running={!paused}
         myTrail={r.trail}
         myPath={r.path}
         position={r.position}
@@ -70,13 +73,13 @@ export default function RunScreen() {
       />
 
       <SafeAreaView edges={['top']} style={st.top} pointerEvents="box-none">
-        <View style={[st.status, { backgroundColor: paused ? theme.warning : outside ? user?.color ?? theme.accent : theme.surface }]}>
-          <Text style={[st.statusText, (paused || outside) && { color: '#000' }]}>
+        <View style={[st.status, { backgroundColor: paused ? theme.xp : outside ? theme.run : theme.surface }]}>
+          <Text style={[st.statusText, outside && !paused && { color: '#FFFFFF' }]}>
             {paused ? '⏸ PAUSADO' : outside ? '⚑ EXPANDINDO — volte ao seu território!' : '● NO SEU TERRITÓRIO'}
           </Text>
         </View>
         {r.toasts.map((t) => (
-          <View key={t.id} style={[st.toast, t.kind === 'gain' && { borderColor: theme.accent }, t.kind === 'steal' && { borderColor: theme.danger }, t.kind === 'warn' && { borderColor: theme.warning }]}>
+          <View key={t.id} style={[st.toast, t.kind === 'gain' && { borderColor: theme.ok }, t.kind === 'steal' && { borderColor: theme.danger }, t.kind === 'warn' && { borderColor: theme.warning }]}>
             <Text style={st.toastText}>{t.text}</Text>
           </View>
         ))}
@@ -97,7 +100,7 @@ export default function RunScreen() {
         {r.error && <Text style={{ color: theme.warning, textAlign: 'center', fontSize: 12 }}>{r.error} — tentando de novo…</Text>}
         <View style={[st.row, { gap: 12, marginTop: 8 }]}>
           {paused ? (
-            <Button title="Continuar" onPress={() => r.resume().catch((e) => Alert.alert('Erro', e.message))} style={{ flex: 1 }} />
+            <Button title="Continuar" variant="run" onPress={() => r.resume().catch((e) => Alert.alert('Erro', e.message))} style={{ flex: 1 }} />
           ) : (
             <Button title="Pausar" variant="secondary" onPress={() => r.pause().catch((e) => Alert.alert('Erro', e.message))} style={{ flex: 1 }} />
           )}
@@ -110,24 +113,23 @@ export default function RunScreen() {
 
 const st = StyleSheet.create({
   top: { position: 'absolute', top: 0, left: 0, right: 0, padding: 12, gap: 8 },
-  status: { borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
-  statusText: { color: theme.text, fontWeight: '900', letterSpacing: 0.5 },
-  toast: { backgroundColor: '#000d', borderRadius: 12, padding: 10, borderLeftWidth: 4, borderColor: theme.info },
-  toastText: { color: theme.text, fontWeight: '700' },
-  sim: { color: theme.warning, textAlign: 'center', fontWeight: '800', fontSize: 11, backgroundColor: '#000a', padding: 4, borderRadius: 6, overflow: 'hidden' },
+  status: { borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', ...lift(8) },
+  statusText: { color: theme.text, fontFamily: font.display, fontSize: 15 },
+  toast: { backgroundColor: theme.surface, borderRadius: 16, padding: 12, borderLeftWidth: 6, borderColor: theme.info, ...lift(6) },
+  toastText: { color: theme.text, fontFamily: font.bodyBold },
+  sim: { color: theme.text, textAlign: 'center', fontFamily: font.bodyBlack, fontSize: 11, backgroundColor: theme.xp, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99, overflow: 'hidden', alignSelf: 'center' },
   panel: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: theme.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     padding: 20,
     paddingBottom: 34,
     gap: 14,
-    borderTopWidth: 1,
-    borderColor: theme.border,
+    ...lift(14),
   },
   row: { flexDirection: 'row' },
 });

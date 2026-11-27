@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.runterritory.app",
@@ -53,7 +53,7 @@
       ]
     ],
     "scheme": "runterritory",
-    "backgroundColor": "#0A0E17",
+    "backgroundColor": "#F5F6FF",
     "extra": {
       "apiUrl": "http://localhost:3000"
     }

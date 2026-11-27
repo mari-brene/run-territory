@@ -2,24 +2,41 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ConquestModal } from '../../components/ConquestModal';
 import { TerritoryMap, type TerritoryMapHandle } from '../../components/TerritoryMap';
 import { Button, Card, Dim, Stat } from '../../components/ui';
 import { api, type RunSummary } from '../../lib/api';
 import { formatArea, formatDate, formatDistance, formatDuration } from '../../lib/format';
 import { useSession } from '../../lib/session';
-import { theme } from '../../lib/theme';
+import { sanitizeLook, unlockedItemNames } from '../../lib/look';
+import { font, theme } from '../../lib/theme';
 
 const KIND: Record<string, string> = { base: 'Base inicial', capture: 'Área fechada', loop_capture: 'Laço fechado' };
 
 export default function Summary() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fresh } = useLocalSearchParams<{ id: string; fresh?: string }>();
   const { user, refreshUser } = useSession();
   const [s, setS] = useState<RunSummary | null>(null);
   const map = useRef<TerritoryMapHandle>(null);
+  // Nível de antes da corrida: a sessão ainda não foi atualizada quando a tela abre.
+  const levelBefore = useRef(user?.level ?? 1).current;
+  const [celebration, setCelebration] = useState<{ levelUp: number | null; unlocked: string[] } | null>(null);
 
   useEffect(() => {
     api.run(id).then(setS).catch(() => {});
     refreshUser().catch(() => {});
+    if (fresh && user)
+      api
+        .profile(user.id)
+        .then((p) => {
+          const medals = p.medals.filter((m) => m.earned).map((m) => m.id);
+          const before = new Set(unlockedItemNames({ level: levelBefore, medals }));
+          setCelebration({
+            levelUp: p.level > levelBefore ? p.level : null,
+            unlocked: unlockedItemNames({ level: p.level, medals }).filter((n) => !before.has(n)),
+          });
+        })
+        .catch(() => setCelebration({ levelUp: null, unlocked: [] }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -41,6 +58,7 @@ export default function Summary() {
           myPath={s.path}
           highlight={[...s.conquests.map((c) => c.geom), ...s.steals.map((c) => c.geom)]}
           initialCenter={s.path[0]}
+          pitch={0}
         />
       </View>
       <View style={{ padding: 16, gap: 14 }}>
@@ -56,7 +74,7 @@ export default function Summary() {
           </View>
         </Card>
 
-        <Card style={{ borderColor: theme.accent }}>
+        <Card style={{ borderColor: theme.xp, borderBottomWidth: 4 }}>
           <Text style={st.h}>Conquistas</Text>
           <View style={st.row}>
             <Stat label="Área ganha" value={formatArea(s.areaGainedM2)} />
@@ -75,14 +93,27 @@ export default function Summary() {
             </Text>
           ))}
         </Card>
-        <Button title="Voltar ao mapa" onPress={() => router.replace('/map')} />
+        <Button title="Voltar ao mapa" variant="run" onPress={() => router.replace('/map')} />
       </View>
+      {celebration && (
+        <ConquestModal
+          summary={s}
+          look={sanitizeLook(user?.look)}
+          levelUp={celebration.levelUp}
+          unlocked={celebration.unlocked}
+          onClose={() => setCelebration(null)}
+          onCustomize={() => {
+            setCelebration(null);
+            router.push('/customize');
+          }}
+        />
+      )}
     </ScrollView>
   );
 }
 
 const st = StyleSheet.create({
   row: { flexDirection: 'row' },
-  h: { color: theme.text, fontWeight: '800', fontSize: 16, marginBottom: 12 },
-  item: { color: theme.text, marginTop: 8, fontWeight: '600' },
+  h: { color: theme.text, fontFamily: font.display, fontSize: 18, marginBottom: 12 },
+  item: { color: theme.text, marginTop: 8, fontFamily: font.bodyBold },
 });

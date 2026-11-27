@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
-import { formatPace, avgSpeedKmh, levelFromXp, medals } from '@run-territory/engine';
+import { formatPace, avgSpeedKmh, levelFromXp, medals, sanitizeLook, lockedChoices, requirementLabel } from '@run-territory/engine';
 import type { Db } from './db';
 import { createSession, endSession, bearer, hashPassword, purgeExpiredSessions, randomColor, requireAuth, userIdFromToken, verifyPassword, verifyPasswordOrDummy, PALETTE } from './auth';
 import { Hub } from './realtime';
@@ -97,9 +97,19 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
     username: u.username,
     email: u.email,
     color: u.color,
+    look: sanitizeLook(u.look),
     xp: u.xp,
     ...levelFromXp(u.xp),
   });
+
+  /** Totais que decidem as medalhas de um jogador. */
+  const totalsSql = `coalesce((SELECT area_m2 FROM territories WHERE user_id = u.id), 0) AS area_m2,
+           (SELECT count(*) FROM runs WHERE user_id = u.id AND status = 'finished')::int AS runs,
+           coalesce((SELECT sum(distance_m) FROM runs WHERE user_id = u.id), 0)::float8 AS distance_m,
+           coalesce((SELECT sum(moving_time_s) FROM runs WHERE user_id = u.id), 0)::float8 AS moving_time_s,
+           (SELECT count(*) FROM conquest_events WHERE user_id = u.id AND kind IN ('capture', 'loop_capture'))::int AS captures,
+           (SELECT count(*) FROM conquest_events WHERE user_id = u.id AND kind = 'steal')::int AS steals`;
+  const medalsOf = (u: any) => medals({ totalDistanceM: u.distance_m, runs: u.runs, areaM2: u.area_m2, captures: u.captures, steals: u.steals });
 
   // As rotas ficam num plugin registrado DEPOIS do rate-limit, para o limite valer para elas.
   app.register(async (app) => {
@@ -133,9 +143,27 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
       return userJson(rows[0]);
     });
 
-    app.patch('/api/me', { preHandler: auth }, async (req) => {
-      const b = z.object({ color: z.string().regex(/^#[0-9A-Fa-f]{6}$/) }).parse(req.body);
-      const { rows } = await db.query('UPDATE users SET color = $2 WHERE id = $1 RETURNING *', [req.userId, b.color]);
+    app.patch('/api/me', { preHandler: auth }, async (req, reply) => {
+      const b = z
+        .object({ color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(), look: z.record(z.string(), z.unknown()).optional() })
+        .refine((v) => v.color || v.look, 'envie color ou look')
+        .parse(req.body);
+      let look = null;
+      if (b.look) {
+        // Itens com cadeado só valem depois de liberados (nível ou medalha).
+        const { rows: t } = await db.query(`SELECT u.xp, ${totalsSql} FROM users u WHERE u.id = $1`, [req.userId]);
+        look = sanitizeLook(b.look);
+        const locked = lockedChoices(look, { level: levelFromXp(t[0].xp).level, medals: medalsOf(t[0]).filter((m) => m.earned).map((m) => m.id) });
+        if (locked.length) {
+          const { option } = locked[0];
+          return reply.code(403).send({ error: `${option.name} ainda está bloqueado (${requirementLabel(option.requires!)})` });
+        }
+      }
+      const { rows } = await db.query('UPDATE users SET color = coalesce($2, color), look = coalesce($3, look) WHERE id = $1 RETURNING *', [
+        req.userId,
+        b.color ?? null,
+        look ? JSON.stringify(look) : null,
+      ]);
       hub.broadcast({ type: 'territories_changed', userIds: [req.userId], by: req.userId });
       return userJson(rows[0]);
     });
@@ -163,7 +191,7 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
         where = 'WHERE t.geom && ST_MakeEnvelope($2, $3, $4, $5, 4326)';
       }
       const { rows } = await db.query(
-        `SELECT t.user_id, u.username, u.color, t.area_m2, ST_AsGeoJSON(t.geom, 6)::json AS geom,
+        `SELECT t.user_id, u.username, u.color, u.look, t.area_m2, ST_AsGeoJSON(t.geom, 6)::json AS geom,
                 EXISTS (SELECT 1 FROM friendships f WHERE f.user_id = $1 AND f.friend_id = t.user_id) AS friend
          FROM territories t JOIN users u ON u.id = t.user_id ${where}`,
         params,
@@ -179,6 +207,8 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
             color: r.color,
             areaM2: r.area_m2,
             relation: r.user_id === req.userId ? 'me' : r.friend ? 'friend' : 'rival',
+            pattern: sanitizeLook(r.look).pattern,
+            emblem: sanitizeLook(r.look).emblem,
           },
         })),
       };
@@ -293,13 +323,8 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
     app.get('/api/users/:id', { preHandler: auth }, async (req, reply) => {
       const { id } = RunId.parse(req.params);
       const { rows } = await db.query(
-        `SELECT u.id, u.username, u.color, u.xp, u.created_at,
-           coalesce((SELECT area_m2 FROM territories WHERE user_id = u.id), 0) AS area_m2,
-           (SELECT count(*) FROM runs WHERE user_id = u.id AND status = 'finished')::int AS runs,
-           coalesce((SELECT sum(distance_m) FROM runs WHERE user_id = u.id), 0)::float8 AS distance_m,
-           coalesce((SELECT sum(moving_time_s) FROM runs WHERE user_id = u.id), 0)::float8 AS moving_time_s,
-           (SELECT count(*) FROM conquest_events WHERE user_id = u.id AND kind IN ('capture', 'loop_capture'))::int AS captures,
-           (SELECT count(*) FROM conquest_events WHERE user_id = u.id AND kind = 'steal')::int AS steals,
+        `SELECT u.id, u.username, u.color, u.look, u.xp, u.created_at,
+           ${totalsSql},
            (SELECT count(*) FROM conquest_events WHERE victim_id = u.id)::int AS losses,
            EXISTS (SELECT 1 FROM friendships WHERE user_id = $2 AND friend_id = u.id) AS is_friend
          FROM users u WHERE u.id = $1`,
@@ -311,6 +336,7 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
         id: u.id,
         username: u.username,
         color: u.color,
+        look: sanitizeLook(u.look),
         memberSince: u.created_at,
         xp: u.xp,
         ...levelFromXp(u.xp),
@@ -325,7 +351,7 @@ export function buildApp(db: Db, opts: { logger?: boolean; rateLimit?: boolean }
           losses: u.losses,
           pace: formatPace(u.distance_m, u.moving_time_s),
         },
-        medals: medals({ totalDistanceM: u.distance_m, runs: u.runs, areaM2: u.area_m2, captures: u.captures, steals: u.steals }),
+        medals: medalsOf(u),
       };
     });
 
