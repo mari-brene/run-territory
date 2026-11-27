@@ -2,9 +2,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { Button, Card, ColorDot, Dim, Segmented } from '../../components/ui';
+import { Button, Card, PlayerBadge, Dim, Segmented } from '../../components/ui';
 import { api, type ChallengeMetric, type Friend } from '../../lib/api';
-import { theme } from '../../lib/theme';
+import { font, lift, theme } from '../../lib/theme';
 
 const DAYS = ['1', '3', '7', '14', '30'] as const;
 
@@ -41,7 +41,7 @@ export default function NewChallenge() {
         {friends.length === 0 && <Dim>Você ainda não tem aliados. Adicione alguém na aba Amigos.</Dim>}
         {friends.map((f) => (
           <Pressable key={f.id} onPress={() => setOpponentId(f.id)} style={[st.friend, opponentId === f.id && st.on]}>
-            <ColorDot color={f.color} size={18} />
+            <PlayerBadge name={f.username} color={f.color} size={34} />
             <Text style={st.name}>{f.username}</Text>
             <Dim>Nível {f.level}</Dim>
           </Pressable>
@@ -68,7 +68,7 @@ export default function NewChallenge() {
 }
 
 const st = StyleSheet.create({
-  h: { color: theme.text, fontWeight: '800', fontSize: 16 },
+  h: { color: theme.text, fontFamily: font.display, fontSize: 16 },
   friend: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.border },
   on: { borderColor: theme.accent, backgroundColor: theme.surfaceAlt },
   name: { color: theme.text, fontWeight: '700', flex: 1 },

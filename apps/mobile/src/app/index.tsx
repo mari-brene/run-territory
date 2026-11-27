@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/ui';
 import { useSession } from '../lib/session';
-import { theme } from '../lib/theme';
+import { font, theme } from '../lib/theme';
 
 export default function Welcome() {
   const { ready, user, settings } = useSession();
@@ -20,7 +20,7 @@ export default function Welcome() {
     <SafeAreaView style={st.root}>
       <View style={st.hero}>
         <View style={st.hexRow}>
-          {['#FF3B5C', '#7CFF4F', '#00C2FF'].map((c) => (
+          {[theme.run, theme.accent, theme.xp].map((c) => (
             <View key={c} style={[st.hex, { backgroundColor: c }]} />
           ))}
         </View>
@@ -33,7 +33,7 @@ export default function Welcome() {
         </View>
       </View>
       <View style={{ gap: 12, padding: 24 }}>
-        <Button title="Criar conta" onPress={() => router.push('/register')} />
+        <Button title="Criar conta" variant="run" onPress={() => router.push('/register')} />
         <Button title="Já tenho conta" variant="ghost" onPress={() => router.push('/login')} />
         <Text style={st.server} onPress={() => router.push('/settings')}>
           ⚙ Configurar servidor · {settings.apiUrl}
@@ -47,10 +47,10 @@ const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   hero: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
   hexRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  hex: { width: 34, height: 34, borderRadius: 8, transform: [{ rotate: '45deg' }], opacity: 0.9 },
-  brand: { color: theme.text, fontSize: 52, fontWeight: '900', lineHeight: 54, letterSpacing: -1.5 },
-  tag: { color: theme.textDim, fontSize: 17, marginTop: 14, lineHeight: 24 },
+  hex: { width: 34, height: 34, borderRadius: 10, transform: [{ rotate: '45deg' }], opacity: 0.9 },
+  brand: { color: theme.text, fontSize: 54, fontFamily: font.display, lineHeight: 56 },
+  tag: { color: theme.textDim, fontSize: 17, marginTop: 14, lineHeight: 24, fontFamily: font.body },
   rules: { marginTop: 32, gap: 10 },
-  rule: { color: theme.text, fontSize: 15, fontWeight: '600' },
+  rule: { color: theme.text, fontSize: 15, fontFamily: font.bodyBold },
   server: { color: theme.textDim, fontSize: 13, textAlign: 'center', marginTop: 4, padding: 8 },
 });

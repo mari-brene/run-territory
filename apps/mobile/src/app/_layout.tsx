@@ -1,21 +1,31 @@
+import { Fredoka_600SemiBold } from '@expo-google-fonts/fredoka/600SemiBold';
+import { Fredoka_700Bold } from '@expo-google-fonts/fredoka/700Bold';
+import { Nunito_600SemiBold } from '@expo-google-fonts/nunito/600SemiBold';
+import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
+import { Nunito_900Black } from '@expo-google-fonts/nunito/900Black';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RunProvider } from '../lib/run';
 import { SessionProvider } from '../lib/session';
-import { theme } from '../lib/theme';
+import { font, theme } from '../lib/theme';
 
 export default function RootLayout() {
+  // Se as fontes falharem, o app segue com a fonte do sistema.
+  const [loaded, error] = useFonts({ Fredoka_600SemiBold, Fredoka_700Bold, Nunito_600SemiBold, Nunito_800ExtraBold, Nunito_900Black });
+  if (!loaded && !error) return null;
   return (
     <SafeAreaProvider>
       <SessionProvider>
         <RunProvider>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerStyle: { backgroundColor: theme.bg },
               headerTintColor: theme.text,
-              headerTitleStyle: { fontWeight: '800' },
+              headerTitleStyle: { fontFamily: font.display, fontSize: 20 },
+              headerShadowVisible: false,
               contentStyle: { backgroundColor: theme.bg },
             }}
           >
@@ -29,6 +39,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings" options={{ title: 'Configurações' }} />
             <Stack.Screen name="challenge/new" options={{ title: 'Novo desafio' }} />
             <Stack.Screen name="region/[id]" options={{ title: 'Bairro' }} />
+            <Stack.Screen name="customize" options={{ title: 'Personalizar' }} />
           </Stack>
         </RunProvider>
       </SessionProvider>

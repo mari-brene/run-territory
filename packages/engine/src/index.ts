@@ -7,3 +7,4 @@ export * as turfOps from './turfWorld';
 export * from './simulate';
 export * from './missions';
 export * from './challenges';
+export * from './look';

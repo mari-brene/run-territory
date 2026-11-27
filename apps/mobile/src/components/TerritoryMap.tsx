@@ -1,10 +1,26 @@
-// Mapa central do jogo: territórios de todos os jogadores, corredores ao vivo, rastro e posição.
-import { Camera, GeoJSONSource, Layer, Map, type CameraRef, type MapRef } from '@maplibre/maplibre-react-native';
+// Mapa central do jogo: territórios de todos os jogadores (com padrão e emblema), corredores ao vivo, rastro e o avatar.
+import { Camera, GeoJSONSource, Images, Layer, Map, Marker, type CameraRef, type MapRef } from '@maplibre/maplibre-react-native';
 import type { Feature, FeatureCollection, LineString, MultiPolygon, Point } from 'geojson';
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { GpsPoint, LiveRunner, Territories } from '../lib/api';
-import { MAP_STYLE } from '../lib/theme';
+import type { Look } from '../lib/look';
+import { MAP_STYLE, theme } from '../lib/theme';
+import { Avatar } from './Avatar';
+
+// Padrões são brancos translúcidos (a cor do dono fica na camada de baixo). Emblemas são selos prontos.
+const MAP_IMAGES = {
+  'pattern-listras': require('../../assets/map/pattern-listras.png'),
+  'pattern-bolinhas': require('../../assets/map/pattern-bolinhas.png'),
+  'pattern-hexagonos': require('../../assets/map/pattern-hexagonos.png'),
+  'pattern-xadrez': require('../../assets/map/pattern-xadrez.png'),
+  'emblem-estrela': require('../../assets/map/emblem-estrela.png'),
+  'emblem-raio': require('../../assets/map/emblem-raio.png'),
+  'emblem-chama': require('../../assets/map/emblem-chama.png'),
+  'emblem-coroa': require('../../assets/map/emblem-coroa.png'),
+};
+const hasPattern = ['all', ['has', 'pattern'], ['!=', ['get', 'pattern'], 'liso']];
+const hasEmblem = ['all', ['has', 'emblem'], ['!=', ['get', 'emblem'], 'inicial']];
 
 export interface TerritoryMapHandle {
   flyTo: (lng: number, lat: number, zoom?: number) => void;
@@ -16,6 +32,11 @@ interface Props {
   territories?: Territories | null;
   live?: LiveRunner[];
   myColor?: string;
+  /** Com o visual, a posição aparece como o avatar do corredor em vez de um ponto. */
+  myLook?: Look;
+  running?: boolean;
+  /** Inclinação da câmera (graus). Padrão 45, como num jogo; use 0 para visão de cima. */
+  pitch?: number;
   myTrail?: [number, number][];
   myPath?: [number, number][];
   position?: GpsPoint | null;
@@ -38,7 +59,7 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
   const map = useRef<MapRef>(null);
 
   useImperativeHandle(ref, () => ({
-    flyTo: (lng, lat, zoom = 16) => camera.current?.flyTo({ center: [lng, lat], zoom, duration: 800 }),
+    flyTo: (lng, lat, zoom = 16) => camera.current?.flyTo({ center: [lng, lat], zoom, pitch: p.pitch ?? 45, duration: 800 }),
     fitBounds: (sw, ne) => camera.current?.fitBounds([sw[0], sw[1], ne[0], ne[1]], { padding: { top: 80, bottom: 220, left: 40, right: 40 }, duration: 600 }),
     visibleBounds: async () => {
       try {
@@ -76,7 +97,7 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
     [p.highlight],
   );
 
-  const color = p.myColor ?? '#7CFF4F';
+  const color = p.myColor ?? theme.run;
 
   return (
     <Map
@@ -94,50 +115,63 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
     >
       <Camera
         ref={camera}
-        initialViewState={{ center: p.initialCenter ?? [-46.6576, -23.5874], zoom: p.initialZoom ?? 15 }}
+        initialViewState={{ center: p.initialCenter ?? [-46.6576, -23.5874], zoom: p.initialZoom ?? 15, pitch: p.pitch ?? 45 }}
         trackUserLocation={p.followUser ? 'course' : undefined}
       />
 
-      {/* Territórios: preenchimento na cor do dono; contorno sólido (eu/rivais) ou tracejado (aliados) */}
+      <Images images={MAP_IMAGES} />
+
+      {/* Territórios: brilho, preenchimento na cor do dono, padrão por cima, contorno sólido (eu/rivais) ou tracejado (aliados) */}
       <GeoJSONSource id="territories" data={(p.territories as FeatureCollection) ?? emptyFC}>
+        <Layer id="territory-glow" type="line" paint={{ 'line-color': ['get', 'color'], 'line-width': 12, 'line-blur': 8, 'line-opacity': 0.55 }} />
         <Layer
           id="territory-fill"
           type="fill"
           paint={{
             'fill-color': ['get', 'color'],
-            'fill-opacity': ['match', ['get', 'relation'], 'me', 0.45, 'friend', 0.3, 0.28],
+            'fill-opacity': ['match', ['get', 'relation'], 'me', 0.45, 'friend', 0.32, 0.3],
           }}
         />
+        <Layer id="territory-pattern" type="fill" filter={hasPattern as any} paint={{ 'fill-pattern': ['concat', 'pattern-', ['get', 'pattern']], 'fill-opacity': 0.85 }} />
         <Layer
           id="territory-line"
           type="line"
           filter={['!=', ['get', 'relation'], 'friend']}
-          paint={{ 'line-color': ['get', 'color'], 'line-width': ['match', ['get', 'relation'], 'me', 3, 2] }}
+          paint={{ 'line-color': ['get', 'color'], 'line-width': ['match', ['get', 'relation'], 'me', 4, 3] }}
+          layout={{ 'line-join': 'round' }}
         />
         <Layer
           id="territory-line-friend"
           type="line"
           filter={['==', ['get', 'relation'], 'friend']}
-          paint={{ 'line-color': ['get', 'color'], 'line-width': 2, 'line-dasharray': [2, 1.5] }}
+          paint={{ 'line-color': ['get', 'color'], 'line-width': 3, 'line-dasharray': [2, 1.5] }}
         />
         <Layer
           id="territory-label"
           type="symbol"
           minzoom={14}
-          layout={{ 'text-field': ['get', 'username'], 'text-size': 12, 'text-font': ['Noto Sans Bold'] }}
-          paint={{ 'text-color': '#ffffff', 'text-halo-color': '#000000', 'text-halo-width': 1.5 }}
+          layout={{
+            'text-field': ['get', 'username'],
+            'text-size': 12,
+            'text-font': ['Noto Sans Bold'],
+            'icon-image': ['case', hasEmblem as any, ['concat', 'emblem-', ['get', 'emblem']], ''],
+            'icon-size': 0.55,
+            'text-offset': ['case', hasEmblem as any, ['literal', [0, 1.6]], ['literal', [0, 0]]],
+            'icon-allow-overlap': true,
+          }}
+          paint={{ 'text-color': theme.text, 'text-halo-color': '#FFFFFF', 'text-halo-width': 2 }}
         />
       </GeoJSONSource>
 
       {/* Área recém-conquistada (resumo) */}
       <GeoJSONSource id="highlight" data={highlight}>
-        <Layer id="highlight-fill" type="fill" paint={{ 'fill-color': '#FFFFFF', 'fill-opacity': 0.25 }} />
-        <Layer id="highlight-line" type="line" paint={{ 'line-color': '#FFFFFF', 'line-width': 2 }} />
+        <Layer id="highlight-fill" type="fill" paint={{ 'fill-color': theme.xp, 'fill-opacity': 0.35 }} />
+        <Layer id="highlight-line" type="line" paint={{ 'line-color': theme.xpDeep, 'line-width': 3 }} />
       </GeoJSONSource>
 
       {/* Percurso completo da corrida */}
       <GeoJSONSource id="my-path" data={line(p.myPath ?? [])}>
-        <Layer id="my-path-line" type="line" paint={{ 'line-color': '#FFFFFF', 'line-width': 3, 'line-opacity': 0.7 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} />
+        <Layer id="my-path-line" type="line" paint={{ 'line-color': theme.text, 'line-width': 3, 'line-opacity': 0.6 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} />
       </GeoJSONSource>
 
       {/* Rastro de expansão (fora do território, ainda não fechado) */}
@@ -153,22 +187,29 @@ export const TerritoryMap = forwardRef<TerritoryMapHandle, Props>(function Terri
           id="runner-dots"
           type="circle"
           filter={['==', ['geometry-type'], 'Point']}
-          paint={{ 'circle-radius': 7, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#000', 'circle-stroke-width': 2 }}
+          paint={{ 'circle-radius': 7, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 }}
         />
         <Layer
           id="runner-names"
           type="symbol"
           filter={['==', ['geometry-type'], 'Point']}
           layout={{ 'text-field': ['get', 'username'], 'text-size': 11, 'text-offset': [0, 1.4], 'text-font': ['Noto Sans Bold'] }}
-          paint={{ 'text-color': '#fff', 'text-halo-color': '#000', 'text-halo-width': 1.5 }}
+          paint={{ 'text-color': theme.text, 'text-halo-color': '#FFFFFF', 'text-halo-width': 2 }}
         />
       </GeoJSONSource>
 
-      {/* Eu */}
+      {/* Eu: anel no chão + avatar (ou um ponto, quando não há visual) */}
       <GeoJSONSource id="me" data={me}>
-        <Layer id="me-halo" type="circle" paint={{ 'circle-radius': 16, 'circle-color': color, 'circle-opacity': 0.25 }} />
-        <Layer id="me-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': color, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 }} />
+        <Layer id="me-halo" type="circle" paint={{ 'circle-radius': 22, 'circle-color': color, 'circle-opacity': 0.22, 'circle-stroke-color': color, 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6, 'circle-pitch-alignment': 'map' }} />
+        {!p.myLook && <Layer id="me-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': color, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 }} />}
       </GeoJSONSource>
+      {p.myLook && p.position && (
+        <Marker id="me-avatar" lngLat={[p.position.lng, p.position.lat]} anchor="bottom">
+          <View>
+            <Avatar look={p.myLook} size={46} running={p.running} />
+          </View>
+        </Marker>
+      )}
     </Map>
   );
 });

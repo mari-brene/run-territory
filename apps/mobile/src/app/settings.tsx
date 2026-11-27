@@ -121,5 +121,5 @@ const st = StyleSheet.create({
   h: { color: theme.text, fontWeight: '800', fontSize: 16, marginBottom: 8 },
   colors: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   color: { width: 40, height: 40, borderRadius: 12 },
-  colorOn: { borderWidth: 3, borderColor: '#fff' },
+  colorOn: { borderWidth: 4, borderColor: theme.text },
 });

@@ -1,6 +1,7 @@
 // Cliente HTTP do backend Run Territory.
 import Constants from 'expo-constants';
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+import type { Emblem, Look, TerritoryPattern } from './look';
 
 const fromConfig = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
 let baseUrl = process.env.EXPO_PUBLIC_API_URL ?? fromConfig ?? 'http://localhost:3000';
@@ -61,6 +62,8 @@ export interface User {
   username: string;
   email: string;
   color: string;
+  /** ausente em servidores antigos: use sanitizeLook(user.look) */
+  look?: Look;
   xp: number;
   level: number;
   xpIntoLevel: number;
@@ -112,6 +115,8 @@ export interface TerritoryProps {
   color: string;
   areaM2: number;
   relation: 'me' | 'friend' | 'rival';
+  pattern?: TerritoryPattern;
+  emblem?: Emblem;
 }
 export type Territories = FeatureCollection<MultiPolygon, TerritoryProps>;
 export interface LiveRunner {
@@ -140,6 +145,8 @@ export interface Profile {
   id: string;
   username: string;
   color: string;
+  /** ausente em servidores antigos: use sanitizeLook(user.look) */
+  look?: Look;
   memberSince: string;
   xp: number;
   level: number;
@@ -220,6 +227,7 @@ export const api = {
   logout: () => req<{ ok: true }>('POST', '/api/auth/logout'),
   me: () => req<User>('GET', '/api/me'),
   updateMe: (color: string) => req<User>('PATCH', '/api/me', { color }),
+  updateLook: (look: Look) => req<User>('PATCH', '/api/me', { look }),
   palette: () => req<string[]>('GET', '/api/palette'),
   deleteMe: (password: string) => req<{ ok: boolean }>('DELETE', '/api/me', { password }),
   health: () => req<{ ok: boolean }>('GET', '/api/health'),
