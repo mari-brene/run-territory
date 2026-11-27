@@ -21,7 +21,7 @@ export async function migrate(db: Db) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const db = createPool(config.databaseUrl);
+  const db = createPool(config.databaseUrl, { ssl: config.databaseSsl });
   migrate(db)
     .then(() => db.end())
     .catch((e) => {
