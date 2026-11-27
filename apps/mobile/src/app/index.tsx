@@ -7,7 +7,7 @@ import { useSession } from '../lib/session';
 import { theme } from '../lib/theme';
 
 export default function Welcome() {
-  const { ready, user } = useSession();
+  const { ready, user, settings } = useSession();
   if (!ready)
     return (
       <View style={[st.root, { justifyContent: 'center' }]}>
@@ -35,6 +35,9 @@ export default function Welcome() {
       <View style={{ gap: 12, padding: 24 }}>
         <Button title="Criar conta" onPress={() => router.push('/register')} />
         <Button title="Já tenho conta" variant="ghost" onPress={() => router.push('/login')} />
+        <Text style={st.server} onPress={() => router.push('/settings')}>
+          ⚙ Configurar servidor · {settings.apiUrl}
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -49,4 +52,5 @@ const st = StyleSheet.create({
   tag: { color: theme.textDim, fontSize: 17, marginTop: 14, lineHeight: 24 },
   rules: { marginTop: 32, gap: 10 },
   rule: { color: theme.text, fontSize: 15, fontWeight: '600' },
+  server: { color: theme.textDim, fontSize: 13, textAlign: 'center', marginTop: 4, padding: 8 },
 });

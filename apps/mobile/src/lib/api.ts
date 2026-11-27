@@ -7,8 +7,14 @@ let baseUrl = process.env.EXPO_PUBLIC_API_URL ?? fromConfig ?? 'http://localhost
 let token: string | null = null;
 
 export const getBaseUrl = () => baseUrl;
+/** Aceita "192.168.0.10:3000" ou "http://192.168.0.10:3000/" e devolve "http://192.168.0.10:3000". */
+export const normalizeUrl = (u: string) => {
+  let s = u.trim().replace(/\/+$/, '');
+  if (s && !/^https?:\/\//i.test(s)) s = `http://${s}`;
+  return s;
+};
 export const setBaseUrl = (u: string) => {
-  baseUrl = u.replace(/\/+$/, '');
+  baseUrl = normalizeUrl(u);
 };
 export const setToken = (t: string | null) => {
   token = t;
@@ -26,9 +32,13 @@ export class ApiError extends Error {
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
+  // Sem isso, um endereço errado deixa a tela "carregando" por minutos.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
     res = await fetch(`${baseUrl}${path}`, {
       method,
+      signal: controller.signal,
       headers: {
         ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -36,7 +46,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'Sem conexão com o servidor');
+    throw new ApiError(0, `Sem conexão com o servidor (${baseUrl}). Confira o endereço em "Configurar servidor".`);
+  } finally {
+    clearTimeout(timer);
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, data?.error ?? `Erro ${res.status}`);
@@ -164,6 +176,7 @@ export const api = {
   me: () => req<User>('GET', '/api/me'),
   updateMe: (color: string) => req<User>('PATCH', '/api/me', { color }),
   palette: () => req<string[]>('GET', '/api/palette'),
+  health: () => req<{ ok: boolean }>('GET', '/api/health'),
 
   territories: (bbox?: [number, number, number, number]) =>
     req<Territories>('GET', `/api/territories${bbox ? `?bbox=${bbox.join(',')}` : ''}`),
