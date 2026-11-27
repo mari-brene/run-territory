@@ -7,7 +7,7 @@ import { migrate } from '../src/migrate';
 
 const ORIGIN = { lat: -23.5874, lng: -46.6576 }; // Ibirapuera
 const db = createPool(process.env.TEST_DATABASE_URL ?? 'postgres://postgres@localhost:5432/runterritory_test');
-const app = buildApp(db);
+const app = buildApp(db, { rateLimit: false });
 
 beforeAll(async () => {
   await db.query('DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;');

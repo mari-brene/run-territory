@@ -1,6 +1,7 @@
 import { createHash, randomBytes, scrypt as _scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { config } from './config';
 import type { Db } from './db';
 
 const scrypt = promisify(_scrypt) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
@@ -17,6 +18,16 @@ export async function verifyPassword(pw: string, stored: string) {
   return timingSafeEqual(key, Buffer.from(keyHex, 'hex'));
 }
 
+// Hash fixo para gastar o mesmo tempo quando o usuário não existe (não revela quais contas existem).
+const DUMMY_HASH = hashPassword('senha-que-ninguem-usa');
+export async function verifyPasswordOrDummy(pw: string, stored: string | undefined) {
+  if (!stored) {
+    await verifyPassword(pw, await DUMMY_HASH);
+    return false;
+  }
+  return verifyPassword(pw, stored);
+}
+
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
 export async function createSession(db: Db, userId: string) {
@@ -27,8 +38,18 @@ export async function createSession(db: Db, userId: string) {
 
 export async function userIdFromToken(db: Db, token: string | undefined | null): Promise<string | null> {
   if (!token) return null;
-  const { rows } = await db.query('SELECT user_id FROM sessions WHERE token_hash = $1', [sha(token)]);
+  // Valida e renova a sessão numa consulta só; a renovação só grava se passou mais de 1 hora.
+  const { rows } = await db.query(
+    `UPDATE sessions SET last_used_at = CASE WHEN last_used_at < now() - interval '1 hour' THEN now() ELSE last_used_at END
+     WHERE token_hash = $1 AND last_used_at > now() - make_interval(days => $2)
+     RETURNING user_id`,
+    [sha(token), config.sessionTtlDays],
+  );
   return rows[0]?.user_id ?? null;
+}
+
+export async function purgeExpiredSessions(db: Db) {
+  await db.query(`DELETE FROM sessions WHERE last_used_at < now() - make_interval(days => $1)`, [config.sessionTtlDays]);
 }
 
 export async function endSession(db: Db, token: string) {
