@@ -21,6 +21,8 @@ export const config = {
   publicLiveRunners: bool(env.PUBLIC_LIVE_RUNNERS, !isProduction),
   /** Sessões (login) expiram depois de N dias sem uso. */
   sessionTtlDays: Number(env.SESSION_TTL_DAYS ?? 60),
+  /** Fuso usado para "hoje", "esta semana" e "este mês" (missões e rankings). */
+  timezone: env.APP_TIMEZONE ?? 'America/Sao_Paulo',
   /** Corredores aparecem "ao vivo" no mapa se mandaram ponto nos últimos N segundos. */
   liveWindowS: Number(env.LIVE_WINDOW_S ?? 120),
 };

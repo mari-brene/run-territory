@@ -27,6 +27,8 @@ export default function RootLayout() {
             <Stack.Screen name="summary/[id]" options={{ title: 'Resumo da corrida' }} />
             <Stack.Screen name="player/[id]" options={{ title: 'Jogador' }} />
             <Stack.Screen name="settings" options={{ title: 'Configurações' }} />
+            <Stack.Screen name="challenge/new" options={{ title: 'Novo desafio' }} />
+            <Stack.Screen name="region/[id]" options={{ title: 'Bairro' }} />
           </Stack>
         </RunProvider>
       </SessionProvider>

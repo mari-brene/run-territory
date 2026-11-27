@@ -47,6 +47,15 @@ export function useMapData(version = 0) {
     else if (m.type === 'runner_stopped') setLive((old) => old.filter((r) => r.userId !== m.userId));
     else if (m.type === 'territory_lost' && m.userId === user?.id)
       Alert.alert('Território invadido!', `${m.byUsername} tomou ${Math.round(m.area).toLocaleString('pt-BR')} m² do seu território.`);
+    else if (m.type === 'challenge') {
+      const text: Record<string, string> = {
+        pending: `${m.byUsername} desafiou você! Veja na aba Missões.`,
+        active: `${m.byUsername} aceitou seu desafio. Valendo!`,
+        declined: `${m.byUsername} recusou seu desafio.`,
+        cancelled: `${m.byUsername} cancelou o desafio.`,
+      };
+      if (text[m.status]) Alert.alert('Desafio', text[m.status]);
+    }
   });
 
   return { territories, live, reload, setViewport };
